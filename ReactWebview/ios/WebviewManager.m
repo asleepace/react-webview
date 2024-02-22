@@ -32,10 +32,10 @@
 @synthesize webView;
 
 RCT_EXPORT_MODULE(PadletWebviewManager)
-// RCT_EXPORT_VIEW_PROPERTY(source, NSDictionary)
-// RCT_EXPORT_VIEW_PROPERTY(backgroundColor, UIColor)
-// RCT_EXPORT_VIEW_PROPERTY(onChange, RCTBubblingEventBlock)
-// RCT_EXPORT_VIEW_PROPERTY(onShouldStartLoadWithRequest, RCTDirectEventBlock)
+RCT_EXPORT_VIEW_PROPERTY(source, NSDictionary)
+RCT_EXPORT_VIEW_PROPERTY(backgroundColor, UIColor)
+RCT_EXPORT_VIEW_PROPERTY(onChange, RCTBubblingEventBlock)
+RCT_EXPORT_VIEW_PROPERTY(onShouldStartLoadWithRequest, RCTDirectEventBlock)
 
 + (BOOL)requiresMainQueueSetup {
   return true;
@@ -99,6 +99,7 @@ RCT_EXPORT_METHOD(asyncJavascript:(nonnull NSNumber *)reactTag
 
 - (BOOL)webView:(__unused PadletWebview *)webView shouldStartLoadForRequest:(NSMutableDictionary<NSString *, id> *)request withCallback:(RCTDirectEventBlock)callback
 {
+  RCTLogInfo(@"[RNTWebViewManager] shouldStartLoadForRequest!");
   _shouldStartLoadLock = [[NSConditionLock alloc] initWithCondition:arc4random()]; // ???
   _shouldStartLoad = YES;
   request[@"lockIdentifier"] = @(_shouldStartLoadLock.condition);

@@ -40,6 +40,7 @@ RCT_EXPORT_MODULE();
   WKUserContentController *userContentController = [[WKUserContentController alloc] init];
   [controller addScriptMessageHandler:self name:@"__iosAppMsgCenter"];
   configuration.userContentController = userContentController;
+  
   if (self = [super initWithFrame:self.frame configuration:configuration]) {
     // Trigger the refresh each time the keyboard is dismissed, fixes a strange bug in iOS 12
     // that causes the WebView viewport not to be resized. https://github.com/apache/cordova-ios/issues/417
@@ -48,7 +49,7 @@ RCT_EXPORT_MODULE();
     UITapGestureRecognizer *gesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(tapped)];
     [gesture setDelegate:self];
     [self addGestureRecognizer:gesture];
-    self.scrollView.backgroundColor = [UIColor clearColor];
+    //self.scrollView.backgroundColor = [UIColor clearColor];
     self.scrollView.contentInset = UIEdgeInsetsZero;
     self.scrollView.alwaysBounceVertical = false;
     self.scrollView.scrollEnabled = true;
@@ -58,6 +59,10 @@ RCT_EXPORT_MODULE();
     self.clipsToBounds = false;
     self.UIDelegate = self;
     self.opaque = false;
+    
+    self.allowsBackForwardNavigationGestures = true;
+    self.allowsLinkPreview = true;
+    self.userInteractionEnabled = true;
     
 #ifdef DEBUG
     if (@available(iOS 16.4, *)) {
@@ -101,9 +106,16 @@ RCT_EXPORT_MODULE();
 
 // Handle where the webview should navigate
 - (void)webView:(WKWebView *)webView decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler {
+  RCTLogInfo(@"[PadletWeview] decidePolicyForNavigationAction %@", navigationAction.request);
   NSURLRequest *request = navigationAction.request;
   NSURL* url = request.URL;
-  decisionHandler(WKNavigationActionPolicyAllow);
+  
+  if ([url.absoluteString isEqualToString:@"about:blank"]) {
+    RCTLogInfo(@"[PadletWebview] cancelling navigation!");
+    decisionHandler(WKNavigationActionPolicyCancel);
+  } else {
+    decisionHandler(WKNavigationActionPolicyAllow);
+  }
 }
 
 - (void)removeListeners {
@@ -111,6 +123,8 @@ RCT_EXPORT_MODULE();
 }
 
 - (WKNavigation *)loadRequest:(NSURLRequest *)request {
+  RCTLogInfo(@"[PadletWebview] loadRequest triggered: %@", request.debugDescription);
+  
   NSMutableURLRequest *req = [request mutableCopy];
   if (clientToken) {
     [req setValue:clientToken forHTTPHeaderField:@"Authorization"];
@@ -130,6 +144,13 @@ RCT_EXPORT_MODULE();
 }
 
 - (void)setSource:(NSDictionary *)source {
+  if ([source objectForKey:@"uri"]) {
+    RCTLogInfo(@"[PadletWebview] setting uri %@", source[@"uri"]);
+    NSString *uri = [source objectForKey:@"uri"];
+    NSURL *url = [NSURL URLWithString:uri];
+    NSURLRequest *urlRequest = [NSURLRequest requestWithURL:url];
+    [self loadRequest:urlRequest];
+  }
 }
 
 - (void)keyboardWillHide {

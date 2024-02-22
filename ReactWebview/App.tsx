@@ -14,7 +14,7 @@ function App(): React.JSX.Element {
   return (
     <SafeAreaView style={styles.background}>
       <StatusBar barStyle={'dark-content'} backgroundColor={'transparent'} />
-      <ReactWebview uri="https://padlet.com" />
+      <ReactWebview uri="https://padlet.com/" />
     </SafeAreaView>
   );
 }
@@ -22,6 +22,7 @@ function App(): React.JSX.Element {
 const styles = StyleSheet.create({
   background: {
     backgroundColor: 'red',
+    flex: 1,
   },
   translucent: {
     backgroundColor: 'transparent',

@@ -1,19 +1,24 @@
 import React, {useRef} from 'react';
-import {NativeModules, StyleSheet, requireNativeComponent} from 'react-native';
+import {
+  NativeModules,
+  StyleSheet,
+  requireNativeComponent,
+  View,
+} from 'react-native';
+import PropTypes from 'prop-types';
 
+// Use the manager to set properties
 const {WebviewManager} = NativeModules;
-
-console.log('[react] WebviewManager', WebviewManager);
-console.log('[react] NativeModules', {NativeModules});
-
-for (const key in NativeModules) {
-  console.log('[react] found:', {key});
-}
 
 // Load Native iOS Components
 const Webview = requireNativeComponent('PadletWebview');
 
-console.log('[react] Webview', Webview);
+// Set the prop types for the Webview
+Webview.propTypes = {
+  source: PropTypes.shape({
+    uri: PropTypes.string,
+  }),
+};
 
 export type ReactWebviewProps = {
   uri: string;
@@ -23,26 +28,25 @@ export default function ReactWebview({uri}: ReactWebviewProps) {
   const webviewRef = useRef(null);
 
   return (
-    <Webview
-      ref={webviewRef}
-      style={styles.container}
-      uri={uri}
-      onMessage={(event: any) => {
-        console.log('[react] onMessage', event.nativeEvent);
-      }}
-      onNavigationStateChange={(event: any) => {
-        console.log('[react] onNavigationStateChange', event.nativeEvent);
-      }}
-    />
+    <View style={styles.container}>
+      <Webview
+        ref={webviewRef}
+        style={styles.webview}
+        source={{uri}}
+        onChange={(event: any) => {
+          console.log('[react] onChange', event.nativeEvent);
+        }}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'white',
   },
   webview: {
+    backgroundColor: 'black',
     flex: 1,
   },
 });
