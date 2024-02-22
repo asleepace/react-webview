@@ -14,7 +14,7 @@ function App(): React.JSX.Element {
   return (
     <SafeAreaView style={styles.background}>
       <StatusBar barStyle={'dark-content'} backgroundColor={'transparent'} />
-      <ReactWebview uri="https://padlet.com/" />
+      <ReactWebview uri="https://padlet.com/starkindustries/my-brilliant-padlet-w7o77m5e43a6d78j" />
     </SafeAreaView>
   );
 }

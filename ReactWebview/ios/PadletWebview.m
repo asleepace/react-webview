@@ -157,6 +157,26 @@ RCT_EXPORT_MODULE();
   NSLog(@"[PadletWebview] keyboardWillHide!");
 }
 
+-(void)menuWillShow:(NSNotification *)notification
+{
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [[UIMenuController sharedMenuController] setMenuVisible:NO animated:NO];
+    });
+}
+
+- (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
+{
+  [[UIMenuController sharedMenuController] setMenuVisible:false];
+}
+
+- (void)touchesEnded:(NSSet *)touches withEvent:(UIEvent *)event {
+    [[UIMenuController sharedMenuController] setMenuVisible:false];
+    UITouch *theTouch = [touches anyObject];
+    if ([theTouch tapCount] == 2) {
+      return;
+    }
+}
+
 - (BOOL)automaticallyAdjustContentInsets {
   return true;
 }
