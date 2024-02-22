@@ -9,7 +9,7 @@
 #import "PadletWebview.h"
 #import <React/RCTBridge.h>
 
-@interface WebviewManager : RCTViewManager <WKUIDelegate, WKNavigationDelegate, RCTBridgeModule>
+@interface PadletWebviewManager : RCTViewManager <WKUIDelegate, WKNavigationDelegate, RCTBridgeModule>
 
 - (instancetype)init;
 

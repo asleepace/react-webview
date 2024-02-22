@@ -5,14 +5,14 @@
 //  Created by Colin Teahan on 2/21/24.
 //
 
-#import "WebviewManager.h"
+#import "PadletWebviewManager.h"
 
 #import <React/RCTBridge.h>
 #import <React/RCTUIManager.h>
 #import <WebKit/WKWebsiteDataStore.h>
 #import <SafariServices/SafariServices.h>
 
-@interface WebviewManager () <PadletWebviewDelegate>
+@interface PadletWebviewManager () <PadletWebviewDelegate>
 {
   CGFloat previousYOffset;
   NSInteger previousDirection;
@@ -23,7 +23,7 @@
 
 @end
 
-@implementation WebviewManager
+@implementation PadletWebviewManager
 {
   NSConditionLock *_shouldStartLoadLock;
   BOOL _shouldStartLoad;
@@ -37,9 +37,11 @@ RCT_EXPORT_VIEW_PROPERTY(backgroundColor, UIColor)
 RCT_EXPORT_VIEW_PROPERTY(onChange, RCTBubblingEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onShouldStartLoadWithRequest, RCTDirectEventBlock)
 
+
 + (BOOL)requiresMainQueueSetup {
   return true;
 }
+
 
 - (instancetype)init {
     if (self = [super init]) {
@@ -69,7 +71,7 @@ RCT_EXPORT_METHOD(executeJavascript:(nonnull NSNumber *)reactTag with:(NSString 
   //RCTLogInfo(@"executing javascript %@",js);
   [self.bridge.uiManager addUIBlock:^(__unused RCTUIManager *uiManager, NSDictionary<NSNumber *, PadletWebview *> *viewRegistry) {
     PadletWebview *view = viewRegistry[reactTag];
-    // RCTLogInfo(@"[XCODE] Execute js token: %@",view.clientToken);
+    RCTLogInfo(@"[WebviewManager] execute js: %@", js);
     [view evaluateJavaScript:js completionHandler:^(id _Nullable result, NSError * _Nullable error) {
       if (result == nil) { result = @""; }
       id outputError = (error) ? error.description : @"";
@@ -125,6 +127,61 @@ RCT_EXPORT_METHOD(startLoadWithResult:(BOOL)result lockIdentifier:(NSInteger)loc
   } else {
     RCTLogWarn(@"[RNTWebViewManager] startLoadWithResult invoked with invalid lockIdentifier: "
                "got %zd, expected %zd", lockIdentifier, _shouldStartLoadLock.condition);
+  }
+}
+
+
+// Clear the WKWebView Cache
+RCT_EXPORT_METHOD(clearCache:(RCTResponseSenderBlock)callback)
+{
+  RCTLogInfo(@"[RNTWebViewManager] Clearing cache...");
+    printf("[RNWebViewManager] clearCache called!\n");
+  [self clearOauthToken];
+
+  NSSet *cachedData = [NSSet setWithArray:@[
+    WKWebsiteDataTypeCookies,
+    WKWebsiteDataTypeDiskCache,
+    WKWebsiteDataTypeMemoryCache,
+    WKWebsiteDataTypeLocalStorage,
+    WKWebsiteDataTypeSessionStorage,
+    WKWebsiteDataTypeWebSQLDatabases,
+    WKWebsiteDataTypeIndexedDBDatabases,
+    WKWebsiteDataTypeOfflineWebApplicationCache,
+  ]];
+  
+  dispatch_async(dispatch_get_main_queue(), ^{
+    [self clearCookies];
+    NSDate *epoch = [NSDate dateWithTimeIntervalSince1970:0];
+    [[WKWebsiteDataStore defaultDataStore] removeDataOfTypes:cachedData modifiedSince:epoch completionHandler:^{}];
+    [[WKWebsiteDataStore defaultDataStore] removeDataOfTypes:cachedData modifiedSince:epoch completionHandler:^{
+      callback(@[@{@"success":@YES}]);
+    }];
+  });
+}
+
+// Clear the shared oauth token for the file provider extension
+- (void)clearOauthToken {
+    RCTLogInfo(@"[RNTWebViewManager] clearOauthToken cache...");
+    printf("[RNWebViewManager] clearOauthToken called!\n");
+    
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    [defaults setObject:nil forKey:@"oauth_token"];
+    [defaults setObject:nil forKey:@"oath_token"]; // Get rid of mispelled one (legacy)
+    [defaults synchronize];
+    NSError *error = nil;
+    // [self.secureStorage setToken:nil error:&error];
+    if (error) {
+        RCTLogError(@"[RNTWebViewManager] Failed to clear token: %@", error.localizedDescription);
+    }
+}
+
+- (void)clearCookies {
+    RCTLogInfo(@"[RNTWebViewManager] clearCookies...");
+    printf("[RNWebViewManager] clearCookies called!\n");
+
+  NSHTTPCookieStorage *cookieStorage = [NSHTTPCookieStorage sharedHTTPCookieStorage];
+  for (NSHTTPCookie *c in cookieStorage.cookies) {
+    [cookieStorage deleteCookie:c];
   }
 }
 

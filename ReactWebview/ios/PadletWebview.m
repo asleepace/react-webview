@@ -27,7 +27,7 @@
 
 RCT_EXPORT_MODULE();
 
-@synthesize clientToken, contentInset, automaticallyAdjustContentInsets;
+@synthesize clientToken, contentInset, automaticallyAdjustContentInsets, customUserAgent;
 
 // React native method
 + (BOOL)requiresMainQueueSetup
@@ -35,8 +35,21 @@ RCT_EXPORT_MODULE();
   return true;
 }
 
+
+- (void)setUserAgentWithAppVersion:(NSString *)appVersion {
+  UIWebView *webView = [[UIWebView alloc] init];
+  NSString *userAgent = [webView stringByEvaluatingJavaScriptFromString:@"navigator.userAgent"];
+  NSString *customUserAgent = [NSString stringWithFormat:@"%@ %@", userAgent, appVersion];
+  RCTLogInfo(@"[Delegate] custom user agent: %@", customUserAgent);
+  self.customUserAgent = customUserAgent;
+}
+
+
 - (id)init {
   WKWebViewConfiguration *configuration = [[WKWebViewConfiguration alloc] init];
+  
+  configuration.applicationNameForUserAgent = @"Padlet_iOS_210.0.0";
+  
   WKUserContentController *userContentController = [[WKUserContentController alloc] init];
   [controller addScriptMessageHandler:self name:@"__iosAppMsgCenter"];
   configuration.userContentController = userContentController;
@@ -64,6 +77,8 @@ RCT_EXPORT_MODULE();
     self.allowsLinkPreview = true;
     self.userInteractionEnabled = true;
     
+    [self setUserAgentWithAppVersion:@"Padlet_iOS_210.0.0"];
+    
 #ifdef DEBUG
     if (@available(iOS 16.4, *)) {
       if ([self respondsToSelector:@selector(setInspectable:)]) {
@@ -75,6 +90,11 @@ RCT_EXPORT_MODULE();
   return self;
 }
 
+// Handle post message requests from Native Bridge
+- (void)userContentController:(WKUserContentController *)userContentController didReceiveScriptMessage:(WKScriptMessage *)message {
+  RCTLogInfo(@"[PadletWebView] native bridge event: %@", message.body);
+  self.onChange(@{ @"data":message.body, @"type":@"message" });
+}
 
 // This allows us to have multiple gesture recognizers on the WKWebView
 - (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer {
@@ -98,11 +118,6 @@ RCT_EXPORT_MODULE();
   completionHandler();
 }
 
-// Handle post message requests from Native Bridge
-- (void)userContentController:(WKUserContentController *)userContentController didReceiveScriptMessage:(WKScriptMessage *)message {
-  //RCTLogInfo(@"Native bridge event: %@",message.body);
-  self.onChange(@{ @"data":message.body, @"type":@"message" });
-}
 
 // Handle where the webview should navigate
 - (void)webView:(WKWebView *)webView decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler {
@@ -110,7 +125,10 @@ RCT_EXPORT_MODULE();
   NSURLRequest *request = navigationAction.request;
   NSURL* url = request.URL;
   
-  if ([url.absoluteString isEqualToString:@"about:blank"]) {
+  if ([url.absoluteString containsString:@"ios-app/page-ready"]) {
+    decisionHandler(WKNavigationActionPolicyCancel);
+  }
+  else if ([url.absoluteString isEqualToString:@"about:blank"]) {
     RCTLogInfo(@"[PadletWebview] cancelling navigation!");
     decisionHandler(WKNavigationActionPolicyCancel);
   } else {
@@ -131,8 +149,8 @@ RCT_EXPORT_MODULE();
   }
   
   // Set the application agent here, not neccesarily neccesary, but we do this on android so it's best to have it here too
-  NSString *build = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleShortVersionString"];
-  NSString *agent = [NSString stringWithFormat:@"Padlet %@", build];
+  // NSString *build = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleShortVersionString"];
+  NSString *agent = [NSString stringWithFormat:@"Padlet %@", @"210.0.0"];
   [req setValue:agent forHTTPHeaderField:@"X-Application-Agent"];
   
   // Return the overridden request
@@ -144,6 +162,12 @@ RCT_EXPORT_MODULE();
 }
 
 - (void)setSource:(NSDictionary *)source {
+  if ([source objectForKey:@"userAgent"]) {
+    NSString *userAgent = [source objectForKey:@"userAgent"];
+    RCTLogInfo(@"[PadletWebview] setting user agent: %@", userAgent);
+    [self setUserAgentWithAppVersion:userAgent];
+  }
+  
   if ([source objectForKey:@"uri"]) {
     RCTLogInfo(@"[PadletWebview] setting uri %@", source[@"uri"]);
     NSString *uri = [source objectForKey:@"uri"];
